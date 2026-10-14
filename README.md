@@ -14,6 +14,7 @@ design course project and covers all four phases of the brief.
 | 2 | Route capacities and seat reservations | Priority queue (lower number = higher priority) |
 | 3 | Best order to visit several universities | Held-Karp TSP (DP + bitmask) |
 | 4 | Region-based MST for large graphs | Per-region MST, then Kruskal across regions |
+| - | Chat in plain English (Claude tool use) that calls all of the above | Tools wrap the algorithms; the model never does the maths |
 | - | All-pairs distance matrix heatmap | Dijkstra from every node |
 
 ### Complexity
@@ -65,11 +66,42 @@ The graph and each university's region are saved to `data/graph.json` whenever
 you add or delete a university, and loaded again on the next start. Delete that
 file to go back to the sample data. Reservations are kept in memory only.
 
+## Chatbot
+
+Ask for routes in plain English instead of using the menu:
+
+```
+export ANTHROPIC_API_KEY=sk-ant-...     # Windows: set ANTHROPIC_API_KEY=...
+python -m campus_route_planner chat
+```
+
+```
+you> What is the quickest way from Sharif to Beheshti?
+  [tool] find_shortest_path({"source": "Sharif", "destination": "Beheshti"})
+bot> Sharif -> Tehran -> Elm-o-Sanat -> Beheshti, a total distance of 8.
+you> Plan a trip through Sharif, Kharazmi and Beheshti and draw it.
+you> Add Allameh in the West region, connected to Tehran with weight 5.
+you> Reserve a seat for Sara on Allameh-Tehran, priority 1.
+```
+
+How it works: Claude chooses from 13 tools (`tools.py`) and explains the result. Every
+route, cost, spanning tree and reservation is computed by the algorithms in this
+package, never by the model, and every tool validates its input (unknown names,
+non-positive or NaN weights, routes that do not exist) and reports errors back so the
+model can recover. The chat and the menu CLI share `data/graph.json`; the chat also
+keeps reservations in `data/reservations.json`. Pictures (including the path animation
+as a GIF) are saved to `output/`.
+
+Options: `--model` (or the `CAMPUS_CHAT_MODEL` variable), `--data`, `--output`.
+Tests use a scripted fake model, so `pytest` needs no API key or network.
+
 ## Project layout
 
 ```
 campus_route_planner/
     cli.py                 menu and user input
+    chatbot.py             Claude tool-use loop and terminal chat
+    tools.py               tools (and JSON schemas) the chatbot can call
     graph_data.py          graph, regions and JSON save/load
     mst.py                 Prim's algorithm
     shortest_path.py       Dijkstra
