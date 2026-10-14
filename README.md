@@ -4,6 +4,10 @@ A command-line tool for planning transport between universities. Universities ar
 nodes in a weighted graph and bus routes are edges. It was built for an algorithm
 design course project and covers all four phases of the brief.
 
+<p align="center">
+  <img src="docs/images/overview.png" alt="Campus Route Planner: graph, MST, shortest path, TSP trip, region MST and distance matrix" width="900">
+</p>
+
 ## Features
 
 | Phase | Feature | Algorithm |
@@ -29,6 +33,20 @@ design course project and covers all four phases of the brief.
 
 TSP accepts up to 15 stops. Distances between stops are shortest-path distances,
 so the route may pass through universities that are not on the stop list.
+
+## Gallery
+
+Every image below is produced by the project itself (menu options, or `save_plot` in the chatbot).
+
+<p align="center">
+  <img src="docs/images/path_animation.gif" alt="Animated Dijkstra shortest path from Sharif to Beheshti" width="480"><br>
+  <em>Dijkstra shortest path, animated</em>
+</p>
+
+| | |
+|---|---|
+| <img src="docs/images/mst.png" alt="Minimum spanning tree"><br><sub>Minimum spanning tree (Prim)</sub> | <img src="docs/images/trip.png" alt="TSP multi-stop route"><br><sub>Best multi-stop order (Held-Karp TSP)</sub> |
+| <img src="docs/images/region_mst.png" alt="Region-based MST"><br><sub>Region-based MST for large graphs</sub> | <img src="docs/images/distance_matrix.png" alt="Distance matrix heatmap"><br><sub>All-pairs distance heatmap</sub> |
 
 ## Getting started
 
