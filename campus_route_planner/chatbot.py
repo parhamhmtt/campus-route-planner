@@ -1,12 +1,3 @@
-"""Natural-language chatbot for the campus route planner (Claude tool use).
-
-The model only decides which tool to call and explains the result. All routes,
-costs and reservations come from the algorithms in this package via
-``tools.PlannerSession``.
-
-Run:  python -m campus_route_planner chat
-Needs the ANTHROPIC_API_KEY environment variable.
-"""
 
 import argparse
 import json
