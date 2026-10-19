@@ -1,7 +1,12 @@
 # Campus Route Planner
 
+A desktop app for planning transport between universities. It starts with 27 real UK
+universities drawn at their true positions on a map of the country. Universities are
+nodes in a weighted graph and bus routes are edges. It was built for an algorithm design
+course project and covers all four phases of the brief.
 
 <p align="center">
+  <img src="docs/images/app.png" alt="The Campus Route Planner window: a map of the UK on the left, chat and forms on the right" width="900">
 </p>
 
 ## Features
@@ -14,7 +19,9 @@
 | 2 | Route capacities and seat reservations | Priority queue (lower number = higher priority) |
 | 3 | Best order to visit several universities | Held-Karp TSP (DP + bitmask) |
 | 4 | Region-based MST for large graphs | Per-region MST, then Kruskal across regions |
+| - | Chat assistant that understands plain English | Keyword rules and fuzzy name matching, works offline |
 | - | All-pairs distance matrix heatmap | Dijkstra from every node |
+| - | Undo for network edits and seat changes | Snapshot taken before each change |
 
 ### Complexity
 
@@ -31,9 +38,10 @@ so the route may pass through universities that are not on the stop list.
 
 ## Gallery
 
+All of these are drawn by the project's own plotting code.
 
 <p align="center">
-  <img src="docs/images/path_animation.gif" alt="Animated Dijkstra shortest path from Sharif to Beheshti" width="480"><br>
+  <img src="docs/images/path_animation.gif" alt="Animated Dijkstra shortest path from Exeter to Aberdeen" width="400"><br>
   <em>Dijkstra shortest path, animated</em>
 </p>
 
@@ -55,25 +63,117 @@ pip install -r requirements.txt
 python -m campus_route_planner
 ```
 
+The window uses Tkinter, which comes with Python on Windows and macOS. On Debian or
+Ubuntu install it with `sudo apt install python3-tk`.
 
+## Using the app
 
+The map is always on the left and shows whatever you asked for last. Under it, a
+result panel prints the details (the route, the cost, the list of seats). Errors show
+up there in red. Everything else is on the right:
 
+| Tab | What it does |
+|-----|--------------|
+| Chat | Type a request in plain English, see the section below |
+| Routes | Shortest path between two universities (with an animation), and the best order for a trip through several stops |
+| Network | Add a university with its links (and, if you like, its latitude and longitude), change a route's weight, remove a university, or start over with the sample network |
+| Seats | Set a route's capacity, reserve or cancel seats, see who is booked |
 
+The buttons above the map switch the view to the plain network, the minimum spanning
+tree, the region-based tree or the distance heatmap. "Undo" takes back the last change to the
+network or the seats. "Save picture" writes the current map to a PNG.
 
+<table>
+  <tr>
+    <td><img src="docs/images/routes.png" alt="Routes tab with a planned trip"></td>
+    <td><img src="docs/images/network.png" alt="Network tab with the add form"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/seats.png" alt="Seats tab with reservations"></td>
+    <td></td>
+  </tr>
+</table>
 
+If you add a university without any links, the app asks for a weight to each
+university you want to compare and connects the new one to the cheapest. A new
+university is put on the map next to the universities it is linked to, unless you give
+its latitude and longitude.
 
+The graph, each university's region and its position are saved to `data/graph.json`
+whenever you add, change or remove something, and loaded again on the next start.
+"Start over" in the Network tab brings back the sample network (and can be undone).
+Files saved by earlier versions, which have no positions, still load and are drawn with
+an automatic layout. Reservations are kept in memory only.
 
+## The sample network
+
+The 27 universities are real, from Aberdeen to Exeter and Belfast to Cambridge, placed
+at their approximate campus coordinates and grouped into 8 regions (Scotland, North
+England, Midlands, East, South East, South West, Wales and Northern Ireland). The data
+is in `campus_route_planner/uk_data.py`.
+
+- A route joins two universities with no other university in between, plus a few main
+  corridors and ferries such as the M5, the M6 and Liverpool to Belfast. There are 41
+  routes and none of them cross.
+- A weight is the straight-line distance in km times 1.25 to allow for winding roads,
+  rounded. These are estimates, not journey planner results.
+- On a big map only the routes you asked about get a weight label, otherwise the picture
+  would be unreadable. Names are placed automatically so they do not overlap.
+- The coastline in `uk_outline.json` comes from [Natural Earth](https://www.naturalearthdata.com/)
+  (public domain), simplified to keep the file small.
+
+A network without coordinates, such as one you build yourself, is drawn with an automatic
+layout instead of the map.
+
+## Chat assistant
+
+The Chat tab takes plain sentences instead of form fields. It works offline, with no
+account and no API key.
+
+Some things it understands:
 
 ```
+shortest way from Exeter to Aberdeen
+and from there to Glasgow?
+animate the path from Bristol to Edinburgh
+plan a trip visiting Bristol, Leeds and Edinburgh
+plan a trip starting at Exeter and ending at Aberdeen, visiting Leeds
+which routes should we keep? (minimum spanning tree)
+show the distance matrix
+what is connected to Manchester?
+what is the weight between Bristol and Bath?
+add Plymouth in the South West region connected to Exeter with weight 75
+connect Oxford and Cambridge with weight 130
+remove Swansea
+set capacity of Bristol-Bath to 3
+reserve a seat for Sara on Bristol-Bath priority 1
+cancel Sara's seat on Bristol-Bath
+who is booked on Bristol-Bath?
+undo
 ```
 
+Requests can be chained with "then", for example `connect Oxford and Cambridge with weight 130 then show the tree`.
+It also remembers what you were just talking about, so "and from there to Glasgow?"
+works after a route question, and `undo` takes back the last change.
 
+Whatever it answers is also drawn on the map, and changes show up in the forms right
+away. The up and down arrows bring back earlier messages.
+
+It is not a language model. The sentence is matched against a set of keyword
+patterns, university names are found with some tolerance for typos, and the answer
+comes from the same code the buttons use. It asks before deleting anything, and says
+so when it does not know a name or did not understand you.
 
 ## Project layout
 
 ```
 campus_route_planner/
-    graph_data.py          graph, regions and JSON save/load
+    gui.py                 the window
+    planner.py             every operation, used by both the buttons and the chat
+    assistant.py           chat assistant (keyword rules, no network)
+    graph_data.py          graph, regions, positions and JSON save/load
+    uk_data.py             the sample network: universities, coordinates, routes
+    uk_outline.json        simplified UK and Ireland coastline for the map
     mst.py                 Prim's algorithm
     shortest_path.py       Dijkstra
     tsp_solver.py          bitmask TSP and route expansion
@@ -89,3 +189,6 @@ tests/                     pytest suite
 ```bash
 python -m pytest
 ```
+
+The tests that open the window need a display and are skipped without one. On a
+headless Linux machine run them with `xvfb-run python -m pytest`.

@@ -5,7 +5,7 @@ import pytest
 from matplotlib.figure import Figure
 
 from campus_route_planner.assistant import Assistant
-from campus_route_planner.graph_data import UniversityGraph
+from sample import small_graph
 from campus_route_planner.planner import Planner
 from campus_route_planner.reservation_system import ReservationSystem
 
@@ -15,7 +15,7 @@ TRIP_TITLE = "TSP route: Beheshti -> Kharazmi -> Sharif (cost 13)"
 
 
 def make_bot(uni=None, save_path=None):
-    planner = Planner(uni or UniversityGraph(), ReservationSystem(), figure=Figure(),
+    planner = Planner(uni or small_graph(), ReservationSystem(), figure=Figure(),
                       save_path=save_path)
     return Assistant(planner)
 
@@ -197,7 +197,7 @@ def test_removing_a_university_drops_its_reservations(bot):
 
 
 def test_single_letter_names_do_not_match_ordinary_words():
-    uni = UniversityGraph()
+    uni = small_graph()
     for name in list(uni.get_graph().nodes):
         uni.remove_university(name)
     for name in "AB":
@@ -215,12 +215,12 @@ def test_changes_are_saved(tmp_path):
     bot = make_bot(save_path=path)
     bot.reply("add Allameh connected to Tehran 5")
     bot.reply("connect Allameh and Sharif with weight 9")
-    saved = UniversityGraph()
+    saved = small_graph()
     assert saved.load(path)
     assert saved.get_graph()["Allameh"]["Sharif"]["weight"] == 9
     bot.reply("remove Allameh")
     bot.reply("yes")
-    reloaded = UniversityGraph()
+    reloaded = small_graph()
     reloaded.load(path)
     assert "Allameh" not in reloaded.get_graph()
 
@@ -265,7 +265,7 @@ def test_help_greeting_and_fallback(bot):
 
 
 def test_empty_network():
-    uni = UniversityGraph()
+    uni = small_graph()
     for name in list(uni.get_graph().nodes):
         uni.remove_university(name)
     bot = make_bot(uni)
@@ -306,3 +306,99 @@ def test_unknown_capitalised_names_are_reported(bot):
     assert "Sara now has" in bot.reply("reserve a seat for Sara on Sharif-Tehran priority 1")
     assert "distance 8" in bot.reply("Can I get from Sharif to Beheshti?")
     assert "Total weight" in bot.reply("What is the MST?")
+
+
+# the UK network
+
+from campus_route_planner.graph_data import UniversityGraph  # noqa: E402
+from campus_route_planner.assistant import HELP, KNOWN_WORDS, tokenize  # noqa: E402
+
+
+@pytest.fixture
+def uk_bot():
+    planner = Planner(UniversityGraph(), ReservationSystem(), figure=Figure(), save_path=None)
+    return Assistant(planner)
+
+
+def test_uk_route_questions(uk_bot):
+    expected = uk_bot.planner.shortest_path("Exeter", "Aberdeen")
+    for question in ["shortest way from Exeter to Aberdeen", "from exeter to aberdeen",
+                     "How do I get from Exeter to Aberdeen?", "route Exeter Aberdeen"]:
+        assert uk_bot.reply(question) == expected, question
+
+
+def test_names_with_several_words(uk_bot):
+    answer = uk_bot.reply("shortest way from East Anglia to St Andrews")
+    assert answer.startswith("Shortest path: East Anglia -> Cambridge")
+    assert answer.split("-> ")[-1].startswith("St Andrews")
+    assert "East Anglia (East) connects to Cambridge" in uk_bot.reply("what is connected to east anglia?")
+    assert "St Andrews (Scotland)" in uk_bot.reply("tell me about st andrews")
+    assert "UCL (South East)" in uk_bot.reply("ucl")
+
+
+def test_typos_in_uk_names(uk_bot):
+    expected = uk_bot.planner.shortest_path("Edinburgh", "Manchester")
+    assert uk_bot.reply("route from Edinburg to Manchestor") == expected
+    assert "Newcastle" in uk_bot.reply("route from Newcastel to Liverpol")
+    assert "Liverpool" in uk_bot.reply("route from Newcastel to Liverpol")
+    assert "East Anglia" in uk_bot.reply("route from Eastanglia to Bristol")
+
+
+def test_ordinary_words_are_not_university_names(uk_bot):
+    assert uk_bot.reply("what leads to Glasgow?").startswith("Glasgow (Scotland) connects to")
+    names = {n.lower() for n in uk_bot.planner.names()}
+    words = set(KNOWN_WORDS) | {w.lower() for w in tokenize(HELP)}
+    for word in sorted(words):
+        if len(word) >= 5 and word not in names:
+            assert uk_bot.scan([word]) == [], word
+
+
+def test_every_help_example_is_understood(uk_bot):
+    for line in HELP.splitlines()[1:]:
+        text = line.strip()
+        if text.startswith("You can chain"):
+            continue
+        answer = uk_bot.reply(text)
+        assert answer and not answer.startswith("I didn't get that"), text
+        assert not answer.startswith("I don't know"), text
+
+
+def test_adding_a_university_by_chat_puts_it_on_the_map(uk_bot):
+    answer = uk_bot.reply("add Plymouth in the South West region connected to Exeter with weight 75")
+    assert answer == "Added Plymouth (South West), connected to Exeter (75)."
+    assert "Plymouth" in uk_bot.planner.uni.get_positions()
+    assert uk_bot.reply("route from Plymouth to Bristol") == uk_bot.planner.shortest_path("Plymouth", "Bristol")
+
+
+def test_a_trip_across_the_uk(uk_bot):
+    answer = uk_bot.reply("plan a trip starting at Exeter and ending at Aberdeen, visiting Leeds")
+    order = answer.splitlines()[0]
+    assert order.startswith("Best order: Exeter -> ") and "Leeds" in order
+    assert "-> Aberdeen (total cost" in order
+
+
+def test_regions_with_several_words(uk_bot):
+    cases = [
+        ("add A1 in the South West region connected to Exeter 50", "South West"),
+        ("add A2 in the north england region connected to Leeds 40", "North England"),
+        ("add A3 region Northern Ireland connected to Belfast 30", "Northern Ireland"),
+        ("add A4 in South East connected to UCL 20", "South East"),
+        ("add A5 in the East region, connected to Cambridge with weight 25", "East"),
+        ("add A6 connected to Oxford 30, in the Midlands region", "Midlands"),
+    ]
+    for text, region in cases:
+        answer = uk_bot.reply(text)
+        name = text.split()[1]
+        assert answer.startswith(f"Added {name} ({region})"), (text, answer)
+        assert uk_bot.planner.uni.get_regions()[name].lower() == region.lower()
+    assert set(uk_bot.planner.region_names()) >= {"South West", "North England", "Northern Ireland"}
+    assert len([r for r in uk_bot.planner.region_names() if r.lower() == "south west"]) == 1
+
+
+def test_a_region_is_never_made_up_from_the_rest_of_the_sentence(uk_bot):
+    for text in ["add B1 region connected to Bath 12", "add B2 in the region with Bath 12",
+                 "add B3 in a very big fancy long region connected to Bath 12"]:
+        answer = uk_bot.reply(text)
+        assert answer.startswith("Added B"), (text, answer)
+        assert "(connected)" not in answer and "(with)" not in answer, answer
+    assert "connected" not in {r.lower() for r in uk_bot.planner.region_names()}

@@ -4,25 +4,25 @@ from difflib import SequenceMatcher
 from .planner import squash, tidy
 
 HELP = """You can ask things like:
-  shortest way from Sharif to Beheshti
-  and from there to Kharazmi?
-  animate the path from Sharif to Beheshti
-  plan a trip visiting Sharif, Kharazmi and Beheshti
-  plan a trip starting at Sharif and ending at Beheshti, visiting Kharazmi
+  shortest way from Exeter to Aberdeen
+  and from there to Glasgow?
+  animate the path from Bristol to Edinburgh
+  plan a trip visiting Bristol, Leeds and Edinburgh
+  plan a trip starting at Exeter and ending at Aberdeen, visiting Leeds
   which routes should we keep? (minimum spanning tree)
   show the distance matrix
-  what is connected to Tehran?
-  what is the weight between Sharif and Tehran?
-  add Allameh in the West region connected to Tehran with weight 5
-  connect Sharif and Beheshti with weight 2
-  remove Kharazmi
-  set capacity of Sharif-Tehran to 3
-  reserve a seat for Sara on Sharif-Tehran priority 1
-  cancel Sara's seat on Sharif-Tehran
-  who is booked on Sharif-Tehran?
+  what is connected to Manchester?
+  what is the weight between Bristol and Bath?
+  add Plymouth in the South West region connected to Exeter with weight 75
+  connect Oxford and Cambridge with weight 130
+  remove Swansea
+  set capacity of Bristol-Bath to 3
+  reserve a seat for Sara on Bristol-Bath priority 1
+  cancel Sara's seat on Bristol-Bath
+  who is booked on Bristol-Bath?
   undo
 You can chain requests with "then", for example:
-  connect Sharif and Beheshti with weight 2 then show the tree"""
+  connect Oxford and Cambridge with weight 130 then show the tree"""
 
 TOKEN = re.compile(r"-?\d+(?:\.\d+)?|[A-Za-z0-9]+")
 NUMBER = re.compile(r"-?\d+(?:\.\d+)?")
@@ -36,10 +36,13 @@ NEW_NAME = re.compile(
 CALLED = re.compile(
     r"\b(?:called|named)\s+(?P<name>[A-Za-z0-9][\w' -]*?)"
     r"(?=\s+(?:in|at|region|connected|connect|linked|link|with|to|and)\b|[,;.]|$)", re.I)
+# regions can have up to three words ("South West", "Northern Ireland")
+NOT_REGION = r"(?!(?:connected|connect|linked|link|with|to|and|weight|region)\b)"
+REGION_WORDS = NOT_REGION + r"[\w-]+(?:\s+" + NOT_REGION + r"[\w-]+){0,2}"
 REGION = [
-    re.compile(r"\b(?:in|at|of)\s+(?:the\s+)?(?P<r>[\w-]+)\s+region", re.I),
-    re.compile(r"\bregion\s*(?:is|=|:)?\s*(?:called\s+|named\s+)?(?P<r>[\w-]+)", re.I),
-    re.compile(r"^\s*(?:in|at)\s+(?:the\s+)?(?P<r>[A-Za-z][\w-]*)", re.I),
+    re.compile(r"\b(?:in|at|of)\s+(?:the\s+)?(?P<r>[\w-]+(?:\s+[\w-]+){0,2}?)\s+region", re.I),
+    re.compile(r"\bregion\s*(?:is|=|:)?\s*(?:called\s+|named\s+)?(?P<r>" + REGION_WORDS + ")", re.I),
+    re.compile(r"^\s*(?:in|at)\s+(?:the\s+)?(?P<r>" + REGION_WORDS + ")", re.I),
 ]
 STUDENT = re.compile(
     r"\bfor\s+(?P<s>[A-Za-z][\w'.-]*(?:\s+[A-Za-z][\w'.-]*){0,2}?)"
@@ -70,6 +73,7 @@ map everything all every each both any mst spanning tree minimum keep matrix hea
 pairs pair connected connections connection neighbor neighbors neighbour neighbours info
 start starting begin beginning end ending finish finishing yes no ok okay sure thanks thank
 hi hello hey take back last one same another other ll re ve don didn doesn isn aren
+lead leads
 """.split())
 
 # for the "did you mean" hint: words that point at an action, and an example of it
@@ -182,6 +186,8 @@ class Assistant:
                 word = "".join(lowered[i:i + size])
                 if len(word) < 5 or any(c.isdigit() for c in word):
                     continue
+                if size == 1 and word in KNOWN_WORDS:
+                    continue  # "leads" is a word, not a typo of Leeds
                 for name, key in keys.items():
                     # names with digits are never guessed: Extra1 is not Extra0
                     if any(c.isdigit() for c in key):

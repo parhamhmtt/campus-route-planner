@@ -3,40 +3,34 @@ from pathlib import Path
 
 import networkx as nx
 
+from .uk_data import ROUTES, UNIVERSITIES
+
 DEFAULT_REGION = "Unassigned"
-
-DEFAULT_REGIONS = {
-    "Sharif": "Central",
-    "Tehran": "Central",
-    "Amirkabir": "Central",
-    "Elm-o-Sanat": "East",
-    "Kharazmi": "East",
-    "Beheshti": "North",
-}
-
-DEFAULT_EDGES = [
-    ("Sharif", "Tehran", 3),
-    ("Sharif", "Amirkabir", 2),
-    ("Tehran", "Elm-o-Sanat", 4),
-    ("Amirkabir", "Kharazmi", 6),
-    ("Kharazmi", "Beheshti", 5),
-    ("Elm-o-Sanat", "Beheshti", 1),
-]
-
 DEFAULT_SAVE_PATH = Path("data") / "graph.json"
 
 
 class UniversityGraph:
-    def __init__(self):
+    # universities are (name, region) or (name, region, latitude, longitude),
+    # routes are (name, name, weight). Without arguments it is the UK network.
+    def __init__(self, universities=None, routes=None):
         self.graph = nx.Graph()
         self.regions = {}
-        self._load_defaults()
+        self.positions = {}
+        self.sample = (UNIVERSITIES if universities is None else universities,
+                       ROUTES if routes is None else routes)
+        self.load_sample()
 
-    def _load_defaults(self):
+    def load_sample(self):
+        universities, routes = self.sample
         self.graph.clear()
-        self.regions = dict(DEFAULT_REGIONS)
-        self.graph.add_nodes_from(DEFAULT_REGIONS)
-        for u, v, w in DEFAULT_EDGES:
+        self.regions = {}
+        self.positions = {}
+        for name, region, *place in universities:
+            self.graph.add_node(name)
+            self.regions[name] = region
+            if place:
+                self.positions[name] = (place[0], place[1])
+        for u, v, w in routes:
             self.graph.add_edge(u, v, weight=w)
 
     def get_graph(self):
@@ -45,11 +39,16 @@ class UniversityGraph:
     def get_regions(self):
         return self.regions
 
-    def add_university(self, name, region=DEFAULT_REGION):
+    def get_positions(self):
+        return self.positions
+
+    def add_university(self, name, region=DEFAULT_REGION, position=None):
         if name in self.graph:
             raise ValueError(f"University '{name}' already exists.")
         self.graph.add_node(name)
         self.regions[name] = region or DEFAULT_REGION
+        if position:
+            self.positions[name] = tuple(position)
 
     def add_connection(self, u, v, weight):
         if u == v:
@@ -66,15 +65,19 @@ class UniversityGraph:
             raise ValueError(f"University '{name}' not found.")
         self.graph.remove_node(name)
         self.regions.pop(name, None)
+        self.positions.pop(name, None)
 
     def save(self, path=DEFAULT_SAVE_PATH):
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
+        nodes = []
+        for n in self.graph.nodes:
+            node = {"name": n, "region": self.regions.get(n, DEFAULT_REGION)}
+            if n in self.positions:
+                node["lat"], node["lon"] = self.positions[n]
+            nodes.append(node)
         data = {
-            "nodes": [
-                {"name": n, "region": self.regions.get(n, DEFAULT_REGION)}
-                for n in self.graph.nodes
-            ],
+            "nodes": nodes,
             "edges": [[u, v, d["weight"]] for u, v, d in self.graph.edges(data=True)],
         }
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -86,9 +89,12 @@ class UniversityGraph:
         data = json.loads(path.read_text(encoding="utf-8"))
         self.graph.clear()
         self.regions = {}
+        self.positions = {}
         for node in data["nodes"]:
             self.graph.add_node(node["name"])
             self.regions[node["name"]] = node.get("region", DEFAULT_REGION)
+            if "lat" in node and "lon" in node:
+                self.positions[node["name"]] = (node["lat"], node["lon"])
         for u, v, w in data["edges"]:
             self.graph.add_edge(u, v, weight=w)
         return True

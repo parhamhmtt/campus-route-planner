@@ -3,14 +3,14 @@ import json
 import pytest
 from matplotlib.figure import Figure
 
-from campus_route_planner.graph_data import UniversityGraph
+from sample import small_graph
 from campus_route_planner.planner import Planner
 from campus_route_planner.reservation_system import ReservationSystem
 
 
 @pytest.fixture
 def planner():
-    return Planner(UniversityGraph(), ReservationSystem(), figure=Figure(), save_path=None)
+    return Planner(small_graph(), ReservationSystem(), figure=Figure(), save_path=None)
 
 
 def test_questions_return_text_and_draw(planner):
@@ -31,7 +31,7 @@ def test_questions_return_text_and_draw(planner):
 
 
 def test_nothing_is_drawn_without_a_figure():
-    plain = Planner(UniversityGraph(), ReservationSystem(), save_path=None)
+    plain = Planner(small_graph(), ReservationSystem(), save_path=None)
     assert "distance 8" in plain.shortest_path("Sharif", "Beheshti")
     assert "Total weight 15" in plain.spanning_tree()
     assert plain.show_network() == "6 universities, 6 routes."
@@ -112,7 +112,7 @@ def test_connect_cheapest(planner):
 def test_changes_are_saved_and_announced(tmp_path):
     path = tmp_path / "graph.json"
     changes, drawings = [], []
-    planner = Planner(UniversityGraph(), ReservationSystem(), figure=Figure(), save_path=path,
+    planner = Planner(small_graph(), ReservationSystem(), figure=Figure(), save_path=path,
                       on_draw=lambda: drawings.append(1), on_change=lambda: changes.append(1))
     planner.add_university("Allameh", "West", [("Tehran", 5)])
     planner.connect("Allameh", "Sharif", 9)
@@ -149,3 +149,134 @@ def test_seats(planner):
         planner.reserve("Sharif", "Tehran", "  ", 1)
     assert planner.seat_report("Sharif", "Tehran").splitlines() == [
         "Sharif - Tehran: 1 of 1 seat taken.", "  Sara (priority 1)"]
+
+
+# the UK map
+
+from campus_route_planner import planner as planner_module  # noqa: E402
+from campus_route_planner.graph_data import UniversityGraph  # noqa: E402
+from campus_route_planner.uk_data import ROUTES  # noqa: E402
+from campus_route_planner.visualizer import project  # noqa: E402
+
+
+@pytest.fixture
+def uk():
+    return Planner(UniversityGraph(), ReservationSystem(), figure=Figure(), save_path=None)
+
+
+def km_between(planner, a, b):
+    places = planner.uni.get_positions()
+    return ((project(*places[a])[0] - project(*places[b])[0]) ** 2
+            + (project(*places[a])[1] - project(*places[b])[1]) ** 2) ** 0.5
+
+
+def test_a_new_university_goes_next_to_its_links(uk):
+    uk.add_university("Plymouth", "South West", [("Exeter", 75)])
+    assert "Plymouth" in uk.uni.get_positions() and "Plymouth" in uk.guessed
+    assert km_between(uk, "Plymouth", "Exeter") < 120
+    assert all(km_between(uk, "Plymouth", n) > 30 for n in uk.names() if n != "Plymouth")
+
+
+def test_a_given_position_is_kept_and_checked(uk):
+    uk.add_university("Plymouth", "South West", [("Exeter", 75)], position=(50.375, -4.139))
+    assert uk.uni.get_positions()["Plymouth"] == (50.375, -4.139)
+    assert "Plymouth" not in uk.guessed
+    for bad in [(91, 0), (0, 181), (-95, 10), (float("nan"), 0), (0, float("inf"))]:
+        with pytest.raises(ValueError, match="Latitude"):
+            uk.add_university("Nope", "", [], position=bad)
+    assert "Nope" not in uk.names()
+
+
+def test_a_network_without_coordinates_stays_without(planner):
+    planner.add_university("Foo", "", [("Tehran", 4)])
+    assert planner.uni.get_positions() == {} and planner.guessed == set()
+
+
+def test_an_unlinked_university_moves_next_to_the_neighbour_it_gets(uk):
+    uk.add_university("Foo", "", [])
+    middle = uk.uni.get_positions()["Foo"]
+    uk.connect_cheapest("Foo", {"Aberdeen": 100, "Exeter": 300})
+    assert uk.uni.get_positions()["Foo"] != middle
+    assert km_between(uk, "Foo", "Aberdeen") < 120
+
+    uk.add_university("Bar", "", [], position=(52.0, -1.0))
+    uk.connect_cheapest("Bar", {"Aberdeen": 100})
+    assert uk.uni.get_positions()["Bar"] == (52.0, -1.0)  # we never move what the user placed
+
+
+def test_guessed_places_never_pile_up(uk):
+    for i in range(15):
+        uk.add_university(f"New{i}", "", [])
+    new = [f"New{i}" for i in range(15)]
+    for i, a in enumerate(new):
+        for b in new[i + 1:] + [n for n in uk.names() if n not in new]:
+            assert km_between(uk, a, b) > 25, (a, b)
+
+
+def test_undo_brings_positions_back(uk):
+    before = dict(uk.uni.get_positions())
+    uk.add_university("Plymouth", "", [("Exeter", 75)])
+    uk.undo()
+    assert uk.uni.get_positions() == before and uk.guessed == set()
+    uk.remove("Bath")
+    assert "Bath" not in uk.uni.get_positions()
+    uk.undo()
+    assert uk.uni.get_positions() == before
+
+
+def test_start_over_restores_the_sample_and_can_be_undone(tmp_path):
+    path = tmp_path / "graph.json"
+    uk = Planner(UniversityGraph(), ReservationSystem(), figure=Figure(), save_path=path)
+    uk.remove("Bath")
+    uk.add_university("Plymouth", "", [("Exeter", 75)])
+    uk.set_capacity("Bristol", "Cardiff", 2)
+    uk.reserve("Bristol", "Cardiff", "Sara", 1)
+
+    text = uk.reset_to_sample()
+    assert text == f"Back to the sample network, 27 universities, {len(ROUTES)} routes."
+    assert "Bath" in uk.names() and "Plymouth" not in uk.names()
+    assert uk.reservations.routes == {} and uk.guessed == set()
+    saved = UniversityGraph([("X", "r")], [])
+    saved.load(path)
+    assert "Bath" in saved.get_graph() and "Plymouth" not in saved.get_graph()
+
+    uk.undo()
+    assert "Plymouth" in uk.names() and "Bath" not in uk.names()
+    assert uk.reservations.routes
+
+
+def test_a_big_distance_table_is_summarised(uk):
+    lines = uk.distance_table().splitlines()
+    assert lines[0] == "27 universities, the full table is on the map."
+    assert lines[1].startswith("Farthest apart: Exeter and Aberdeen (")
+    assert lines[2] == "Closest: Bath and Bristol (26)."
+    import networkx as nx
+    longest = max(max(d.values()) for _, d in nx.all_pairs_dijkstra_path_length(uk.graph))
+    assert f"({longest})" in lines[1]
+    uk.add_university("Island", "", [], position=(52.0, -4.0))
+    assert uk.distance_table().splitlines()[-1] == "27 pairs cannot reach each other."
+
+
+def test_a_small_table_is_still_printed(planner):
+    assert len(planner.distance_table().splitlines()) == 7
+
+
+def test_the_map_is_drawn_when_there_are_positions(uk, planner):
+    from matplotlib.patches import Polygon
+    uk.show_network()
+    assert any(isinstance(p, Polygon) for p in uk.figure.axes[0].patches)
+    planner.show_network()
+    assert not any(isinstance(p, Polygon) for p in planner.figure.axes[0].patches)
+
+
+def test_long_journeys_get_shorter_animations(uk, monkeypatch):
+    seen = []
+    monkeypatch.setattr(planner_module, "animate_path",
+                        lambda graph, path, title, **options: seen.append((len(path) - 1, options["steps_per_edge"])))
+    uk.shortest_path("Exeter", "Aberdeen", animate=True)
+    uk.shortest_path("Bath", "Bristol", animate=True)
+    chain = [(f"U{i}", "r", 50 + i * 0.1, -1.0) for i in range(40)]
+    line = Planner(UniversityGraph(chain, [(f"U{i}", f"U{i + 1}", 5) for i in range(39)]),
+                   ReservationSystem(), figure=Figure(), save_path=None)
+    line.shortest_path("U0", "U39", animate=True)
+    assert seen == [(9, 24), (1, 25), (39, 6)]

@@ -4,7 +4,7 @@ import networkx as nx
 import pytest
 
 from campus_route_planner.distance_matrix import build_distance_matrix
-from campus_route_planner.graph_data import UniversityGraph
+from sample import small_graph
 from campus_route_planner.mst import compute_mst
 from campus_route_planner.scalable_graph import ScalableGraph
 from campus_route_planner.shortest_path import find_shortest_path
@@ -13,7 +13,7 @@ from campus_route_planner.tsp_solver import expand_route, tsp_dp
 
 @pytest.fixture
 def uni():
-    return UniversityGraph()
+    return small_graph()
 
 
 def total_weight(graph):
@@ -106,10 +106,9 @@ def test_tsp_with_a_fixed_start_and_end_matches_brute_force():
     import itertools
 
     from campus_route_planner.distance_matrix import build_distance_matrix
-    from campus_route_planner.graph_data import UniversityGraph
     from campus_route_planner.tsp_solver import tsp_dp
 
-    graph = UniversityGraph().get_graph()
+    graph = small_graph().get_graph()
     cities = ["Sharif", "Kharazmi", "Beheshti", "Tehran", "Amirkabir"]
     dist = build_distance_matrix(graph, cities)
 
@@ -134,10 +133,9 @@ def test_tsp_with_a_fixed_start_and_end_matches_brute_force():
 
 
 def test_tsp_start_and_end_must_make_sense():
-    from campus_route_planner.graph_data import UniversityGraph
     from campus_route_planner.tsp_solver import tsp_dp
 
-    graph = UniversityGraph().get_graph()
+    graph = small_graph().get_graph()
     with pytest.raises(ValueError, match="not one of the stops"):
         tsp_dp(graph, ["Sharif", "Tehran"], start="Beheshti")
     with pytest.raises(ValueError, match="different"):

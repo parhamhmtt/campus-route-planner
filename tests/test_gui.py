@@ -5,13 +5,14 @@ from tkinter import ttk  # noqa: E402
 
 from campus_route_planner import gui  # noqa: E402
 from campus_route_planner.gui import App, WeightDialog  # noqa: E402
+from sample import small_graph  # noqa: E402
 
 NAMES = ["Sharif", "Tehran", "Amirkabir", "Elm-o-Sanat", "Kharazmi", "Beheshti"]
 
 
-def make_app(path):
+def make_app(path, uk=False):
     try:
-        window = App(save_path=path)
+        window = App(save_path=path, uni=None if uk else small_graph())
     except tk.TclError:
         pytest.skip("no display available")
     window.geometry("1240x780+-3000+0")  # keep the test window off the screen
@@ -345,7 +346,7 @@ def test_chat_shortcuts(app):
     press(app, "List the universities")
     assert app.transcript.tag_ranges("table")  # lists and tables use the fixed-width font
     press(app, "What can you do?")
-    assert "shortest way from Sharif to Beheshti" in transcript(app)
+    assert "shortest way from Exeter to Aberdeen" in transcript(app)
 
 
 def test_editing_by_chat_updates_the_forms(app):
@@ -395,3 +396,125 @@ def test_closing_stops_the_animation(tmp_path):
     assert planner.animation is None
     with pytest.raises(tk.TclError):
         window.winfo_exists()
+
+
+# the UK network and the map
+
+@pytest.fixture
+def uk_app(tmp_path):
+    window = make_app(tmp_path / "graph.json", uk=True)
+    yield window
+    try:
+        window.close()
+    except tk.TclError:
+        pass
+
+
+def on_the_map(app):
+    from matplotlib.patches import Polygon
+    return any(isinstance(p, Polygon) for p in app.figure.axes[0].patches)
+
+
+def test_the_app_opens_on_the_uk_map(uk_app):
+    assert "27 universities" in result(uk_app)
+    assert on_the_map(uk_app)
+    assert (uk_app.source.get(), uk_app.target.get()) == ("Exeter", "Aberdeen")
+    assert len(uk_app.stops.get(0, "end")) == 27
+
+
+def test_a_path_across_the_uk(uk_app):
+    press(uk_app, "Find path")
+    assert result(uk_app).startswith("Shortest path: Exeter -> Bristol")
+    assert result(uk_app).endswith("St Andrews -> Aberdeen (distance 1054)")
+    assert on_the_map(uk_app) and "1054" in uk_app.figure.get_suptitle()
+    press(uk_app, "Animate")
+    assert uk_app.planner.animation is not None and on_the_map(uk_app)
+
+
+def test_every_toolbar_view_stays_on_the_map(uk_app):
+    for label in ("Spanning tree", "Regions", "Network"):
+        press(uk_app, label)
+        assert on_the_map(uk_app), label
+    press(uk_app, "Distances")
+    assert len(uk_app.figure.axes) == 2 and "full table is on the map" in result(uk_app)
+
+
+def test_a_long_answer_can_be_scrolled(uk_app):
+    press(uk_app, "Spanning tree")
+    assert result(uk_app).count("\n") > 20       # 26 routes do not fit in six lines
+    assert uk_app.result.cget("yscrollcommand")   # so the panel has a scrollbar
+
+
+def test_add_a_university_with_a_location(uk_app):
+    uk_app.new_name.set("Plymouth")
+    uk_app.new_region.set("south west")
+    uk_app.new_lat.set("50.375")
+    uk_app.new_lon.set("-4.139")
+    uk_app.link_target.set("Exeter")
+    uk_app.link_weight.set("75")
+    press(uk_app, "Add link")
+    press(uk_app, "Add university")
+    assert result(uk_app) == "Added Plymouth (South West), connected to Exeter (75)."
+    assert uk_app.planner.uni.get_positions()["Plymouth"] == (50.375, -4.139)
+    assert (uk_app.new_lat.get(), uk_app.new_lon.get()) == ("", "")
+    assert on_the_map(uk_app)
+
+
+def test_without_a_location_the_university_is_placed_near_its_link(uk_app):
+    uk_app.new_name.set("Plymouth")
+    uk_app.link_target.set("Exeter")
+    uk_app.link_weight.set("75")
+    press(uk_app, "Add link")
+    press(uk_app, "Add university")
+    assert "Plymouth" in uk_app.planner.guessed
+    assert "Plymouth" in uk_app.planner.uni.get_positions()
+
+
+def test_location_mistakes(uk_app):
+    uk_app.new_name.set("Plymouth")
+    for lat, lon, message in (("50", "", "both latitude and longitude"), ("", "-4", "both latitude"),
+                              ("abc", "-4", "Latitude must be a number"),
+                              ("50", "x", "Longitude must be a number"),
+                              ("95", "-4", "Latitude must be between")):
+        uk_app.new_lat.set(lat)
+        uk_app.new_lon.set(lon)
+        press(uk_app, "Add university")
+        assert failed(uk_app) and message in result(uk_app), (lat, lon)
+    assert "Plymouth" not in uk_app.planner.names()
+
+
+def test_an_unlinked_university_is_moved_next_to_the_neighbour_you_pick(uk_app):
+    uk_app.ask_weights = lambda name, others: {"Aberdeen": 90, "Exeter": 400}
+    uk_app.new_name.set("Foo")
+    press(uk_app, "Add university")
+    assert "Connected Foo to Aberdeen with weight 90" in result(uk_app)
+    planner = uk_app.planner
+    from campus_route_planner.visualizer import project
+    foo, abe = project(*planner.uni.get_positions()["Foo"]), project(*planner.uni.get_positions()["Aberdeen"])
+    assert ((foo[0] - abe[0]) ** 2 + (foo[1] - abe[1]) ** 2) ** 0.5 < 120
+
+
+def test_start_over(uk_app):
+    uk_app.confirm = lambda title, text: True
+    uk_app.doomed.set("Bath")
+    press(uk_app, "Remove")
+    assert "Bath" not in uk_app.planner.names()
+
+    uk_app.confirm = lambda title, text: False
+    press(uk_app, "Start over")
+    assert "Bath" not in uk_app.planner.names() and "left as it is" in result(uk_app)
+
+    uk_app.confirm = lambda title, text: True
+    press(uk_app, "Start over")
+    assert "Bath" in uk_app.planner.names() and result(uk_app).startswith("Back to the sample network")
+    assert "Bath" in uk_app.stops.get(0, "end")
+    press(uk_app, "Undo")
+    assert "Bath" not in uk_app.planner.names()
+
+
+def test_chat_on_the_uk_map(uk_app):
+    uk_app.send("shortest way from Bristol to Edinburgh")
+    assert on_the_map(uk_app) and "Bristol" in transcript(uk_app)
+    uk_app.send("add Plymouth in the South West region connected to Exeter with weight 75")
+    assert "Plymouth" in uk_app.stops.get(0, "end")
+    assert "Plymouth" in uk_app.planner.uni.get_positions()

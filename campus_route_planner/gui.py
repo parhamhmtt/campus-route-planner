@@ -114,11 +114,11 @@ class WeightDialog(tk.Toplevel):
 
 
 class App(tk.Tk):
-    def __init__(self, save_path=DEFAULT_SAVE_PATH):
+    def __init__(self, save_path=DEFAULT_SAVE_PATH, uni=None):
         super().__init__()
         self.title("Campus Route Planner")
         self.geometry("1280x780")
-        self.minsize(1120, 660)
+        self.minsize(1120, 720)
         self.configure(background=PAPER)
 
         self.ui_font = first_available(
@@ -127,7 +127,7 @@ class App(tk.Tk):
             ["Cascadia Mono", "Consolas", "Menlo", "DejaVu Sans Mono", "Courier New"], "TkFixedFont")
         self.make_styles()
 
-        uni = UniversityGraph()
+        uni = uni or UniversityGraph()
         loaded = bool(save_path) and uni.load(save_path)
         self.figure = Figure(figsize=(7, 5), dpi=100, facecolor=PANEL)
         self.planner = Planner(uni, ReservationSystem(), figure=self.figure, save_path=save_path,
@@ -141,7 +141,7 @@ class App(tk.Tk):
         self.build_left()
         self.build_right()
         self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, minsize=430)
+        self.columnconfigure(1, minsize=470)
         self.rowconfigure(0, weight=1)
 
         self.refresh()
@@ -222,19 +222,25 @@ class App(tk.Tk):
         widget.configure(highlightthickness=0, background=PANEL)
         widget.pack(fill="both", expand=True)
 
-        self.result = tk.Text(left, height=8, wrap="word", font=(self.mono_font, 10),
+        holder = ttk.Frame(left)
+        holder.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+        holder.columnconfigure(0, weight=1)
+        self.result = tk.Text(holder, height=6, wrap="word", font=(self.mono_font, 10),
                               background=PANEL, foreground=INK, relief="flat", padx=12, pady=9,
                               highlightthickness=1, highlightbackground=LINE, state="disabled",
                               borderwidth=0, cursor="arrow")
         self.result.tag_configure("error", foreground=RED)
-        self.result.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+        scroll = ttk.Scrollbar(holder, command=self.result.yview)
+        self.result.configure(yscrollcommand=scroll.set)
+        self.result.grid(row=0, column=0, sticky="ew")
+        scroll.grid(row=0, column=1, sticky="ns")
 
     def build_right(self):
         right = ttk.Frame(self, padding=(8, 16, 16, 16))
         right.grid(row=0, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
         right.rowconfigure(0, weight=1)
-        tabs = ttk.Notebook(right)
+        tabs = ttk.Notebook(right, width=450)
         tabs.grid(row=0, column=0, sticky="nsew")
         self.tabs = tabs
         self.name_boxes = []
@@ -402,6 +408,7 @@ class App(tk.Tk):
         tab = self.network_tab
         add = self.section(tab, "Add a university", 0)
         self.new_name, self.new_region = tk.StringVar(), tk.StringVar()
+        self.new_lat, self.new_lon = tk.StringVar(), tk.StringVar()
         self.link_target, self.link_weight = tk.StringVar(), tk.StringVar()
         self.label(add, "Name", 0)
         ttk.Entry(add, textvariable=self.new_name, font=(self.ui_font, 10)).grid(
@@ -409,22 +416,29 @@ class App(tk.Tk):
         self.label(add, "Region", 1)
         self.region_box = self.box(add, self.new_region, editable=True)
         self.region_box.grid(row=1, column=1, sticky="ew", pady=4)
-        self.label(add, "Connect to", 2)
-        self.box(add, self.link_target).grid(row=2, column=1, sticky="ew", pady=4)
-        self.label(add, "Weight", 3)
+        self.label(add, "Lat, lon", 2)
+        place = ttk.Frame(add, style="Panel.TFrame")
+        place.grid(row=2, column=1, sticky="w", pady=4)
+        ttk.Entry(place, textvariable=self.new_lat, width=9, font=(self.ui_font, 10)).pack(side="left")
+        ttk.Entry(place, textvariable=self.new_lon, width=9, font=(self.ui_font, 10)).pack(
+            side="left", padx=(6, 0))
+        ttk.Label(place, text="optional", style="Muted.TLabel").pack(side="left", padx=(10, 0))
+        self.label(add, "Connect to", 3)
+        self.box(add, self.link_target).grid(row=3, column=1, sticky="ew", pady=4)
+        self.label(add, "Weight", 4)
         link = ttk.Frame(add, style="Panel.TFrame")
-        link.grid(row=3, column=1, sticky="w", pady=4)
+        link.grid(row=4, column=1, sticky="w", pady=4)
         ttk.Entry(link, textvariable=self.link_weight, width=8, font=(self.ui_font, 10)).pack(
             side="left")
         ttk.Button(link, text="Add link", command=self.add_link).pack(side="left", padx=(8, 0))
 
-        self.links = tk.Listbox(add, height=3, exportselection=False, font=(self.ui_font, 10),
+        self.links = tk.Listbox(add, height=2, exportselection=False, font=(self.ui_font, 10),
                                 relief="flat", borderwidth=0, highlightthickness=1,
                                 highlightbackground=LINE, highlightcolor=BLUE,
                                 selectbackground=SOFT, selectforeground=INK, activestyle="none")
-        self.links.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+        self.links.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(4, 0))
         row = ttk.Frame(add, style="Panel.TFrame")
-        row.grid(row=5, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        row.grid(row=6, column=0, columnspan=2, sticky="w", pady=(10, 0))
         ttk.Button(row, text="Add university", style="Accent.TButton",
                    command=self.add_university).pack(side="left")
         ttk.Button(row, text="Remove link", command=self.remove_link).pack(side="left", padx=(8, 0))
@@ -443,12 +457,16 @@ class App(tk.Tk):
         ttk.Button(route, text="Set route", style="Accent.TButton", command=self.set_route).grid(
             row=2, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
-        remove = self.section(tab, "Remove a university", 2)
+        remove = self.section(tab, "Remove or start over", 2)
         self.doomed = tk.StringVar()
         self.box(remove, self.doomed).grid(row=0, column=0, sticky="ew", pady=4)
         remove.columnconfigure(0, weight=1)
         ttk.Button(remove, text="Remove", command=self.remove_university).grid(
             row=0, column=1, padx=(8, 0))
+
+        self.label(remove, "Or go back to the 27 UK universities.", 1, muted=True)
+        ttk.Button(remove, text="Start over", command=self.reset_network).grid(
+            row=1, column=1, padx=(8, 0), pady=(6, 0))
 
     def add_link(self):
         def add():
@@ -470,11 +488,14 @@ class App(tk.Tk):
     def add_university(self):
         def add():
             name = self.new_name.get()
-            text = self.planner.add_university(name, self.new_region.get(), self.pending_links)
+            place = self.location()
+            text = self.planner.add_university(name, self.new_region.get(), self.pending_links, place)
             linked = bool(self.pending_links)
             self.pending_links.clear()
             self.links.delete(0, "end")
             self.new_name.set("")
+            self.new_lat.set("")
+            self.new_lon.set("")
             if not linked and len(self.planner.names()) > 1:
                 added = self.planner.names()[-1]
                 others = [n for n in self.planner.names() if n != added]
@@ -483,6 +504,14 @@ class App(tk.Tk):
                     text += " " + self.planner.connect_cheapest(added, weights)
             return text
         self.attempt(add)
+
+    def location(self):
+        lat, lon = self.new_lat.get().strip(), self.new_lon.get().strip()
+        if not lat and not lon:
+            return None
+        if not lat or not lon:
+            raise ValueError("Give both latitude and longitude, or leave both empty.")
+        return (number(lat, "Latitude"), number(lon, "Longitude"))
 
     def ask_weights(self, name, others):
         return WeightDialog(self, name, others, self.ui_font).result
@@ -502,6 +531,14 @@ class App(tk.Tk):
             self.doomed.set("")
             return self.planner.remove(name)
         self.attempt(remove)
+
+    def reset_network(self):
+        def reset():
+            if not self.confirm("Start over", "Replace the current network with the sample "
+                                "network? You can undo this."):
+                return "The network was left as it is."
+            return self.planner.reset_to_sample()
+        self.attempt(reset)
 
     def confirm(self, title, text):
         return messagebox.askyesno(title, text, parent=self)

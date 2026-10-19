@@ -1,30 +1,30 @@
 import pytest
 
-from campus_route_planner.graph_data import UniversityGraph
+from sample import small_graph
 from campus_route_planner.reservation_system import ReservationSystem
 
 
 def test_save_and_load_round_trip(tmp_path):
-    uni = UniversityGraph()
+    uni = small_graph()
     uni.add_university("Newcomer", "West")
     uni.add_connection("Newcomer", "Sharif", 7)
     path = tmp_path / "graph.json"
     uni.save(path)
 
-    other = UniversityGraph()
+    other = small_graph()
     assert other.load(path)
     assert other.get_graph()["Newcomer"]["Sharif"]["weight"] == 7
     assert other.get_regions()["Newcomer"] == "West"
 
 
 def test_load_missing_file_keeps_defaults(tmp_path):
-    uni = UniversityGraph()
+    uni = small_graph()
     assert not uni.load(tmp_path / "missing.json")
     assert "Sharif" in uni.get_graph()
 
 
 def test_graph_validation():
-    uni = UniversityGraph()
+    uni = small_graph()
     with pytest.raises(ValueError):
         uni.add_university("Sharif")
     with pytest.raises(ValueError):
@@ -36,7 +36,7 @@ def test_graph_validation():
 
 
 def test_remove_university_drops_edges_and_region():
-    uni = UniversityGraph()
+    uni = small_graph()
     uni.remove_university("Tehran")
     assert "Tehran" not in uni.get_graph()
     assert "Tehran" not in uni.get_regions()
