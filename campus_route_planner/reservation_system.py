@@ -6,7 +6,7 @@ def _key(u1, u2):
 
 
 class ReservationSystem:
-    # one heap per route, a lower priority number comes out first
+    
     def __init__(self):
         self.routes = {}
 

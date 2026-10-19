@@ -6,7 +6,7 @@ DEFAULT_REGION = "Unassigned"
 
 
 class ScalableGraph:
-    # one MST per region first, then the trees are joined with the cheapest cross-region edges
+    
 
     def __init__(self, full_graph, region_map):
         self.full_graph = full_graph
@@ -36,8 +36,8 @@ class ScalableGraph:
             self.merged_graph.add_edges_from(mst.edges(data=True))
 
     def connect_regions(self):
-        # kruskal on the cross-region edges. a region can be in several pieces,
-        # so union-find starts from the components, not from whole regions
+        
+        
         links = sorted(
             (data.get("weight", 1), u, v)
             for u, v, data in self.full_graph.edges(data=True)

@@ -35,7 +35,7 @@ def tidy(name):
 def positive(weight):
     if not math.isfinite(weight) or weight <= 0:
         raise ValueError("Weights must be positive numbers.")
-    return int(weight) if weight == int(weight) else weight  # 5.0 is shown as 5
+    return int(weight) if weight == int(weight) else weight  
 
 
 class Planner:
@@ -43,13 +43,13 @@ class Planner:
                  on_draw=None, on_change=None):
         self.uni = uni
         self.reservations = reservations
-        self.figure = figure          # where pictures are drawn, None means no pictures
-        self.save_path = save_path    # None means do not write the graph to disk
-        self.on_draw = on_draw        # called after the figure changed
-        self.on_change = on_change    # called after universities or routes changed
+        self.figure = figure          
+        self.save_path = save_path    
+        self.on_draw = on_draw        
+        self.on_change = on_change    
         self.animation = None
         self.undo_stack = []
-        self.guessed = set()          # universities whose map position was chosen by us
+        self.guessed = set()          
 
     @property
     def graph(self):
@@ -73,10 +73,10 @@ class Planner:
         if not self.graph:
             raise ValueError("There are no universities yet. Add one first.")
 
-    # undo
+    
 
     def remember(self, label):
-        # call this after the checks pass and right before something is changed
+        
         self.undo_stack.append((self.graph.copy(), dict(self.uni.get_regions()),
                                 dict(self.uni.get_positions()), set(self.guessed),
                                 copy.deepcopy(self.reservations.routes), label))
@@ -97,7 +97,7 @@ class Planner:
         self.changed()
         return f"Undid: {label}."
 
-    # drawing
+    
 
     def stop_animation(self):
         if self.animation is not None and self.animation.event_source is not None:
@@ -121,7 +121,7 @@ class Planner:
         word = "university" if count == 1 else "universities"
         return f"{count} {word}, {plural(self.graph.number_of_edges(), 'route')}."
 
-    # questions
+    
 
     def shortest_path(self, source, target, animate=False):
         self.check(source, target)
@@ -135,7 +135,7 @@ class Planner:
         if self.figure is not None:
             places = self.uni.get_positions()
             if animate:
-                # long journeys get fewer frames per leg so they do not drag on
+                
                 steps = max(6, min(25, 220 // (len(path) - 1)))
                 self.animation = animate_path(self.graph, path, title, steps_per_edge=steps,
                                               show=False, fig=self.figure, positions=places)
@@ -255,7 +255,7 @@ class Planner:
             lines.append(f"  {name} ({self.region_of(name)}): {links or 'no connections'}")
         return "\n".join(lines)
 
-    # changing the network
+    
 
     def changed(self):
         if self.save_path:
@@ -265,7 +265,7 @@ class Planner:
             self.on_change()
 
     def guess_position(self, near):
-        # near is a list of universities, the new one goes by them (or mid-map without any)
+        
         places = self.uni.get_positions()
         spots = [places[n] for n in near if n in places] or list(places.values())
         lat = sum(p[0] for p in spots) / len(spots)
@@ -292,7 +292,7 @@ class Planner:
             if squash(existing) == squash(name):
                 raise ValueError(f"{existing} already exists.")
 
-        # check every link before touching the graph
+        
         checked = []
         for other, weight in links:
             self.check(other)
@@ -316,7 +316,7 @@ class Planner:
 
         self.remember(f"added {name}")
         if guessing:
-            self.guessed.add(name)  # after the snapshot, so undo takes it back out
+            self.guessed.add(name)  
         self.uni.add_university(name, region, position)
         for other, weight in links:
             self.uni.add_connection(name, other, weight)
@@ -327,7 +327,7 @@ class Planner:
         return f"Added {name} ({region}), connected to {joined}."
 
     def connect_cheapest(self, name, candidates):
-        # candidates maps a university to the weight it would have, the cheapest one wins
+        
         self.check(name)
         best = None
         for other, weight in candidates.items():
@@ -339,7 +339,7 @@ class Planner:
             raise ValueError("Give at least one weight to compare.")
         self.remember(f"connected {name} to {best[0]}")
         self.uni.add_connection(name, *best)
-        if name in self.guessed:  # it was dropped mid-map, so move it next to its neighbour
+        if name in self.guessed:  
             self.uni.positions[name] = self.guess_position([best[0]])
         self.changed()
         return f"Connected {name} to {best[0]} with weight {fmt(best[1])}."
@@ -374,7 +374,7 @@ class Planner:
         self.changed()
         return f"Back to the sample network, {self.show_network()}"
 
-    # seats
+    
 
     def direct_route(self, a, b):
         self.check(a, b)

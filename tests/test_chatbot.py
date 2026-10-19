@@ -11,7 +11,7 @@ from campus_route_planner.chatbot import SYSTEM_PROMPT, ChatBot, run_repl
 from campus_route_planner.tools import TOOL_SCHEMAS, PlannerSession
 
 
-# ---- scripted stand-in for anthropic.Anthropic ----------------------------- #
+
 def text(t):
     return NS(type="text", text=t)
 
@@ -30,7 +30,7 @@ class FakeMessages:
         self.calls = []
 
     def create(self, **kwargs):
-        kwargs["messages"] = list(kwargs["messages"])  # snapshot: the bot keeps appending
+        kwargs["messages"] = list(kwargs["messages"])  
         self.calls.append(kwargs)
         item = self.script.pop(0)
         if isinstance(item, BaseException):
@@ -53,7 +53,7 @@ def tool_results(message):
     return message["content"]
 
 
-# ---- the loop ------------------------------------------------------------- #
+
 def test_plain_answer_without_tools(session):
     client = FakeClient(reply(text("Hello!")))
     bot = ChatBot(session, client)
@@ -138,7 +138,7 @@ def test_tools_change_state_across_turns_and_history_is_kept(session):
     assert "Allameh" in session.uni.get_graph()
     assert bot.ask("route to Sharif?") == "8 units."
     third = client.messages.calls[3]["messages"]
-    assert len(third) == 7  # whole conversation is sent each time
+    assert len(third) == 7  
     assert json.loads(tool_results(third[6])[0]["content"])["distance"] == 8
     bot.reset()
     assert bot.messages == []
@@ -153,7 +153,7 @@ def test_api_failure_rolls_back_history(session):
     bot = ChatBot(session, client)
     with pytest.raises(RuntimeError):
         bot.ask("first")
-    assert bot.messages == []  # no dangling tool_use / orphan user message
+    assert bot.messages == []  
     assert bot.ask("second") == "back again"
     assert bot.messages[0] == {"role": "user", "content": "second"}
 
@@ -182,7 +182,7 @@ def test_empty_reply_has_a_fallback(session):
     assert ChatBot(session, FakeClient(reply(stop="refusal"))).ask("hi") == "(no reply)"
 
 
-# ---- terminal chat -------------------------------------------------------- #
+
 def drive(bot, *lines):
     feed = iter(lines)
     out = []
@@ -207,7 +207,7 @@ def test_repl_commands_and_errors(session):
     assert "Could not get a reply: RuntimeError: boom" in joined
     assert "Conversation cleared." in joined
     assert "bot> fresh" in joined
-    assert len(client.messages.calls) == 3  # blank line and /commands never hit the API
+    assert len(client.messages.calls) == 3  
 
 
 def test_repl_ends_on_eof_and_ctrl_c(session):
@@ -229,7 +229,7 @@ def test_authentication_hint():
     assert "ANTHROPIC_API_KEY" in chatbot.explain_error(AuthenticationError("401"))
 
 
-# ---- entry points --------------------------------------------------------- #
+
 def test_main_requires_an_api_key(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     with pytest.raises(SystemExit) as exit_info:
@@ -281,11 +281,11 @@ def test_chat_subcommand_is_routed(monkeypatch):
     assert called["argv"] == ["--model", "m"]
 
 
-# ---- the real SDK, against a mock HTTP server ------------------------------ #
+
 def test_wire_format_with_the_real_sdk(session):
     anthropic = pytest.importorskip("anthropic")
     try:
-        import httpx2 as httpx  # newer SDK releases
+        import httpx2 as httpx  
     except ImportError:
         import httpx
 
@@ -321,7 +321,7 @@ def test_wire_format_with_the_real_sdk(session):
     assert len(body1["tools"]) == len(TOOL_SCHEMAS)
     assert all(t["input_schema"]["type"] == "object" for t in body1["tools"])
 
-    # the assistant turn goes back exactly as received, then the tool result follows it
+    
     assistant, results = body2["messages"][1], body2["messages"][2]
     assert assistant["role"] == "assistant"
     tool_use = [b for b in assistant["content"] if b["type"] == "tool_use"][0]

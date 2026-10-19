@@ -56,7 +56,7 @@ class ChatBot:
         try:
             return self._run_until_answer(start)
         except BaseException:
-            # never leave a half-finished tool exchange in the history
+            
             del self.messages[start:]
             raise
 
@@ -74,8 +74,8 @@ class ChatBot:
 
             if response.stop_reason != "tool_use":
                 if any(b.type == "tool_use" for b in response.content):
-                    # cut off mid tool call: a tool_use without a tool_result would
-                    # make every later request fail, so forget this exchange
+                    
+                    
                     del self.messages[start:]
                     return "That reply was cut off before I could finish. Please try again."
                 if response.stop_reason == "max_tokens":
@@ -104,9 +104,9 @@ class ChatBot:
                 "Please try a simpler request.")
 
 
-# --------------------------------------------------------------------------- #
-# terminal chat
-# --------------------------------------------------------------------------- #
+
+
+
 HELP = """\
 Ask in plain English, for example:
   What is the shortest way from Sharif to Beheshti?

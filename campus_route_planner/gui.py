@@ -50,7 +50,7 @@ def whole(text, label):
 
 
 class WeightDialog(tk.Toplevel):
-    # asks for a weight to each university and returns {university: weight}
+    
     def __init__(self, parent, name, others, ui_font):
         super().__init__(parent, background=PANEL)
         self.title(f"Connect {name}")
@@ -154,7 +154,7 @@ class App(tk.Tk):
         self.chat_entry.focus_set()
         self.protocol("WM_DELETE_WINDOW", self.close)
 
-    # look
+    
 
     def make_styles(self):
         style = ttk.Style(self)
@@ -195,7 +195,7 @@ class App(tk.Tk):
                         arrowsize=13, arrowcolor=MUTED)
         self.option_add("*TCombobox*Listbox.font", ui)
 
-    # layout
+    
 
     def build_left(self):
         left = ttk.Frame(self, padding=(16, 16, 8, 16))
@@ -280,7 +280,7 @@ class App(tk.Tk):
         label.grid(row=row, column=column, sticky="w", padx=(0, 10), pady=4)
         return label
 
-    # chat tab
+    
 
     def build_chat(self):
         tab = self.chat_tab
@@ -349,7 +349,7 @@ class App(tk.Tk):
             self.chat_entry.insert(0, self.history[self.history_at])
         return "break"
 
-    # routes tab
+    
 
     def build_routes(self):
         tab = self.routes_tab
@@ -402,7 +402,7 @@ class App(tk.Tk):
         start, end = (v.get() if v.get() != "Any" else None for v in (self.trip_start, self.trip_end))
         self.attempt(lambda: self.planner.trip(chosen, start, end))
 
-    # network tab
+    
 
     def build_network(self):
         tab = self.network_tab
@@ -543,7 +543,7 @@ class App(tk.Tk):
     def confirm(self, title, text):
         return messagebox.askyesno(title, text, parent=self)
 
-    # seats tab
+    
 
     def build_seats(self):
         tab = self.seats_tab
@@ -596,7 +596,7 @@ class App(tk.Tk):
         self.attempt(lambda: self.planner.cancel_reservation(
             self.need(self.seat_a), self.need(self.seat_b), self.student.get()))
 
-    # shared helpers
+    
 
     def need(self, variable):
         value = variable.get().strip()
@@ -657,7 +657,7 @@ class App(tk.Tk):
 
     def close(self):
         self.planner.stop_animation()
-        self.update_idletasks()  # let a queued redraw run before the widgets go away
+        self.update_idletasks()  
         self.destroy()
 
 

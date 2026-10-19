@@ -16,13 +16,13 @@ BASE_COLOR = "skyblue"
 REGION_PALETTE = ["#4c9be8", "#f2a541", "#6bbf59", "#c77dd6", "#e8645a", "#8d8d8d",
                   "#2a9d8f", "#e9c46a", "#9b5de5", "#00a6a6"]
 
-# the map: kilometres east and north of a point in the middle of the UK
+
 LAT0, LON0 = 54.5, -3.0
-VIEW = (-8.4, 1.9, 49.8, 58.8)  # west, east, south, north (degrees)
+VIEW = (-8.4, 1.9, 49.8, 58.8)  
 SEA, LAND, ABROAD, COAST = "#e6eef4", "#fbfaf6", "#eceee9", "#a9b6b2"
 MAP_NODE, LABEL_COLOR = "#3a86c8", "#1d2830"
-MANY_EDGES = 30  # above this only the highlighted routes get a weight
-CHAR_KM, LABEL_KM, GAP_KM = 12.5, 22.0, 13.0  # rough label size on the map
+MANY_EDGES = 30  
+CHAR_KM, LABEL_KM, GAP_KM = 12.5, 22.0, 13.0  
 
 _outline = None
 
@@ -45,14 +45,14 @@ def _layout(graph):
 
 
 def _map_positions(graph, positions):
-    # real coordinates are used only when every university has them
+    
     if not positions or any(n not in positions for n in graph.nodes):
         return None
     return {n: project(*positions[n]) for n in graph.nodes}
 
 
 def _axes(fig):
-    # draw into the figure we are given (the gui window), or open a new one
+    
     if fig is None:
         return plt.subplots()
     fig.clear()
@@ -60,7 +60,7 @@ def _axes(fig):
 
 
 def _finish(fig, title, show):
-    # a long title (a trip with many stops) goes on two lines instead of running off the edge
+    
     fig.suptitle(textwrap.fill(title, 70), fontsize=10, fontweight="bold")
     if show:
         plt.show()
@@ -74,7 +74,7 @@ def _overlap(a, b):
 
 
 def _label_spots(pos):
-    # for every name pick the spot around its dot that collides least with the others
+    
     crowd = {n: sum(1 for m in pos if m != n and math.dist(pos[n], pos[m]) < 100) for n in pos}
     dots = [(x - GAP_KM, y - GAP_KM, x + GAP_KM, y + GAP_KM) for x, y in pos.values()]
     placed, spots = [], {}
@@ -104,7 +104,7 @@ def _label_spots(pos):
 def _view_limits(pos):
     x0, y0 = project(VIEW[2], VIEW[0])
     x1, y1 = project(VIEW[3], VIEW[1])
-    for x, y in pos.values():  # a university outside the UK widens the view
+    for x, y in pos.values():  
         x0, x1 = min(x0, x - 40), max(x1, x + 40)
         y0, y1 = min(y0, y - 40), max(y1, y + 40)
     return x0, x1, y0, y1
@@ -142,7 +142,7 @@ def _draw_map(graph, pos, ax, colors, highlight):
             graph, pos, ax=ax, edge_labels=labels, font_size=6.5, rotate=False,
             bbox=dict(boxstyle="round,pad=0.12", fc="white", ec="none", alpha=0.85))
         for text in texts.values():
-            text.set_zorder(4.5)  # under the university names
+            text.set_zorder(4.5)  
 
     x0, x1, y0, y1 = _view_limits(pos)
     ax.set_xlim(x0, x1)
@@ -227,7 +227,7 @@ def draw_regions(graph, region_of, title, show=True, fig=None, positions=None):
 
 def animate_path(graph, path, title, interval=50, steps_per_edge=25, show=True, fig=None,
                  positions=None):
-    # the caller has to keep the returned animation alive or it stops
+    
     if len(path) < 2:
         return None
 

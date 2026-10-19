@@ -1,11 +1,11 @@
 import pytest
 
 tk = pytest.importorskip("tkinter")
-from tkinter import ttk  # noqa: E402
+from tkinter import ttk  
 
-from campus_route_planner import gui  # noqa: E402
-from campus_route_planner.gui import App, WeightDialog  # noqa: E402
-from sample import small_graph  # noqa: E402
+from campus_route_planner import gui  
+from campus_route_planner.gui import App, WeightDialog  
+from sample import small_graph  
 
 NAMES = ["Sharif", "Tehran", "Amirkabir", "Elm-o-Sanat", "Kharazmi", "Beheshti"]
 
@@ -15,7 +15,7 @@ def make_app(path, uk=False):
         window = App(save_path=path, uni=None if uk else small_graph())
     except tk.TclError:
         pytest.skip("no display available")
-    window.geometry("1240x780+-3000+0")  # keep the test window off the screen
+    window.geometry("1240x780+-3000+0")  
     window.update()
     return window
 
@@ -76,7 +76,7 @@ def test_toolbar_views(app):
     assert app.figure.get_suptitle() == "Region-based MST"
     press(app, "Distances")
     assert result(app).splitlines()[1].split()[:2] == ["Sharif", "0"]
-    assert len(app.figure.axes) == 2  # heatmap and its colour bar
+    assert len(app.figure.axes) == 2  
     press(app, "Network")
     assert app.figure.get_suptitle() == "University graph"
     assert not failed(app)
@@ -318,8 +318,8 @@ def test_chat(app):
     assert "shortest way from Sharif to Beheshti" in text
     assert "Sharif -> Tehran -> Elm-o-Sanat -> Beheshti (distance 8)" in text
     assert app.chat_entry.get() == ""
-    assert "distance 8" in app.figure.get_suptitle()      # the map followed the question
-    assert "distance 8" in result(app)                    # and so did the result panel
+    assert "distance 8" in app.figure.get_suptitle()      
+    assert "distance 8" in result(app)                    
     assert app.transcript.tag_ranges("mine") and app.transcript.tag_ranges("theirs")
 
 
@@ -344,7 +344,7 @@ def test_chat_shortcuts(app):
     assert "Total weight 15" in transcript(app)
     assert app.figure.get_suptitle() == "Minimum spanning tree (red)"
     press(app, "List the universities")
-    assert app.transcript.tag_ranges("table")  # lists and tables use the fixed-width font
+    assert app.transcript.tag_ranges("table")  
     press(app, "What can you do?")
     assert "shortest way from Exeter to Aberdeen" in transcript(app)
 
@@ -398,7 +398,7 @@ def test_closing_stops_the_animation(tmp_path):
         window.winfo_exists()
 
 
-# the UK network and the map
+
 
 @pytest.fixture
 def uk_app(tmp_path):
@@ -441,8 +441,8 @@ def test_every_toolbar_view_stays_on_the_map(uk_app):
 
 def test_a_long_answer_can_be_scrolled(uk_app):
     press(uk_app, "Spanning tree")
-    assert result(uk_app).count("\n") > 20       # 26 routes do not fit in six lines
-    assert uk_app.result.cget("yscrollcommand")   # so the panel has a scrollbar
+    assert result(uk_app).count("\n") > 20       
+    assert uk_app.result.cget("yscrollcommand")   
 
 
 def test_add_a_university_with_a_location(uk_app):

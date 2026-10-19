@@ -5,9 +5,9 @@ MAX_CITIES = 15
 
 
 def tsp_dp(graph, cities, start=None, end=None):
-    # held-karp: dp[mask][i] is the cheapest way to visit the cities in mask and end at i.
-    # the path is open and distances are shortest paths in the graph. start and end are
-    # optional, without them any city can come first or last
+    
+    
+    
     cities = list(dict.fromkeys(cities))
     n = len(cities)
 

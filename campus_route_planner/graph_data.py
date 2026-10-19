@@ -10,8 +10,8 @@ DEFAULT_SAVE_PATH = Path("data") / "graph.json"
 
 
 class UniversityGraph:
-    # universities are (name, region) or (name, region, latitude, longitude),
-    # routes are (name, name, weight). Without arguments it is the UK network.
+    
+    
     def __init__(self, universities=None, routes=None):
         self.graph = nx.Graph()
         self.regions = {}

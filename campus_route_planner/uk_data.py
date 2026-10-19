@@ -1,8 +1,8 @@
-# Approximate campus locations (latitude, longitude).
-#
-# A route joins two universities with no other university in between, plus a few main
-# corridors and ferries (M5, M6, Liverpool to Belfast). A weight is the straight-line
-# distance in km times 1.25 for winding roads, rounded.
+
+
+
+
+
 UNIVERSITIES = [
     ("Exeter", "South West", 50.7366, -3.5344),
     ("Southampton", "South East", 50.9352, -1.3961),

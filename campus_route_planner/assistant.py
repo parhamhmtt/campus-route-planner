@@ -36,7 +36,7 @@ NEW_NAME = re.compile(
 CALLED = re.compile(
     r"\b(?:called|named)\s+(?P<name>[A-Za-z0-9][\w' -]*?)"
     r"(?=\s+(?:in|at|region|connected|connect|linked|link|with|to|and)\b|[,;.]|$)", re.I)
-# regions can have up to three words ("South West", "Northern Ireland")
+
 NOT_REGION = r"(?!(?:connected|connect|linked|link|with|to|and|weight|region)\b)"
 REGION_WORDS = NOT_REGION + r"[\w-]+(?:\s+" + NOT_REGION + r"[\w-]+){0,2}"
 REGION = [
@@ -55,7 +55,7 @@ CANCEL = re.compile(
 PRIORITY = re.compile(r"priority\s*(?:of|is|=|:)?\s*(-?\d+)", re.I)
 NOT_A_STUDENT = {"on", "from", "between", "in", "at", "my", "the", "a", "this", "that", "it", "all"}
 
-# words the sentence patterns already understand, anything else next to a name is reported
+
 KNOWN_WORDS = set("""
 a an the this that these those it its there here me my we us our you your i please can could
 would will should shall might may do does did is are was were be been am have has had having
@@ -76,7 +76,7 @@ hi hello hey take back last one same another other ll re ve don didn doesn isn a
 lead leads
 """.split())
 
-# for the "did you mean" hint: words that point at an action, and an example of it
+
 SUGGESTIONS = [
     ({"route", "path", "way", "shortest", "quickest", "fastest", "get", "go", "travel",
       "distance", "far", "from"}, "shortest way from {a} to {b}"),
@@ -110,10 +110,10 @@ def is_number(token):
 class Assistant:
     def __init__(self, planner, on_miss=None):
         self.planner = planner
-        self.on_miss = on_miss     # called with every sentence it could not handle
+        self.on_miss = on_miss     
         self.misses = []
-        self.pending = None        # university waiting for a yes/no before it is removed
-        self.last_names = []       # what the last answer was about, for "from there"
+        self.pending = None        
+        self.last_names = []       
         self.last_kind = None
 
     @property
@@ -137,7 +137,7 @@ class Assistant:
         answers = []
         for part in parts:
             answers.append(self.run(self.dispatch, part))
-            if self.pending:   # a question is waiting, do not go on without the answer
+            if self.pending:   
                 break
         return "\n".join(a for a in answers if a)
 
@@ -147,7 +147,7 @@ class Assistant:
         except ValueError as err:
             return str(err)
 
-    # finding universities in a sentence
+    
 
     def find_universities(self, tokens, fuzzy=True):
         names = []
@@ -167,7 +167,7 @@ class Assistant:
                 span = set(range(i, i + size))
                 if span & taken or lowered[i:i + size] != [p.lower() for p in parts]:
                     continue
-                # very short names ("A", "B") must be typed exactly, or "a seat" matches
+                
                 if len("".join(parts)) <= 2 and tokens[i:i + size] != parts:
                     continue
                 taken |= span
@@ -177,8 +177,8 @@ class Assistant:
         return sorted(found)
 
     def typos(self, lowered, taken):
-        # one to three words that are close to a name once the spaces are ignored,
-        # so "sharfi" and "elm o santa" still work. best matches are taken first
+        
+        
         keys = {name: squash(name) for name in self.graph.nodes}
         options = []
         for size in (1, 2, 3):
@@ -187,9 +187,9 @@ class Assistant:
                 if len(word) < 5 or any(c.isdigit() for c in word):
                     continue
                 if size == 1 and word in KNOWN_WORDS:
-                    continue  # "leads" is a word, not a typo of Leeds
+                    continue  
                 for name, key in keys.items():
-                    # names with digits are never guessed: Extra1 is not Extra0
+                    
                     if any(c.isdigit() for c in key):
                         continue
                     score = SequenceMatcher(None, word, key).ratio()
@@ -220,7 +220,7 @@ class Assistant:
         return words
 
     def after_word(self, tokens, matches, words):
-        # the university named right after one of the words, as in "starting at Sharif"
+        
         lowered = [t.lower() for t in tokens]
         for k, token in enumerate(lowered):
             if token in words:
@@ -252,7 +252,7 @@ class Assistant:
         self.last_kind = kind
         self.last_names = list(names)
 
-    # the router
+    
 
     def dispatch(self, text):
         low = text.lower()
@@ -274,7 +274,7 @@ class Assistant:
         if has(r"\b(undo|revert)\b") or re.fullmatch(r"(take that back|go back)\W*", low):
             return planner.undo()
 
-        # follow-ups that lean on the previous answer
+        
         if self.last_names:
             if len(names) == 1 and has(r"\bfrom\s+(there|it|here)\b"):
                 names = [self.last_names[-1], names[0]]
@@ -406,7 +406,7 @@ class Assistant:
         a, b, c = known[:3]
         return f"I didn't get that. Did you mean something like '{best[1].format(a=a, b=b, c=c)}'?"
 
-    # actions that need a little parsing
+    
 
     def add_university(self, name, rest):
         region = ""

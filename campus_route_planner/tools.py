@@ -39,9 +39,9 @@ PLOT_KINDS = (
 )
 
 
-# --------------------------------------------------------------------------- #
-# helpers
-# --------------------------------------------------------------------------- #
+
+
+
 def _clean(value):
     """Make a number JSON-safe: inf/nan become None, whole floats become ints."""
     if isinstance(value, float):
@@ -94,9 +94,9 @@ def _route_key(a, b):
     return tuple(sorted((a, b)))
 
 
-# --------------------------------------------------------------------------- #
-# the session: graph + reservations + the tools
-# --------------------------------------------------------------------------- #
+
+
+
 class PlannerSession:
     """State shared by all tools: the university graph and the reservations.
 
@@ -119,7 +119,7 @@ class PlannerSession:
             self.uni.load(self.save_path)
             self._load_reservations()
 
-    # -- persistence -------------------------------------------------------- #
+    
     def _save_graph(self):
         if self.persist:
             self.uni.save(self.save_path)
@@ -147,16 +147,16 @@ class PlannerSession:
         graph = self.uni.get_graph()
         for item in json.loads(self.reservations_path.read_text(encoding="utf-8")):
             a, b = item["from"], item["to"]
-            if not graph.has_edge(a, b):  # route was deleted outside the chat
+            if not graph.has_edge(a, b):  
                 continue
             queue = sorted((e["priority"], e["student"]) for e in item["reservations"])
-            # a sorted list already satisfies the heap invariant
+            
             self.reservations.routes[_route_key(a, b)] = {
                 "capacity": item["capacity"],
                 "queue": queue,
             }
 
-    # -- name handling ------------------------------------------------------ #
+    
     def resolve(self, name):
         """Map user/model spelling to a real university name, or raise ValueError."""
         graph = self.uni.get_graph()
@@ -194,9 +194,9 @@ class PlannerSession:
                 return existing
         return region
 
-    # ------------------------------------------------------------------ #
-    # tools (one method per entry in TOOL_SCHEMAS)
-    # ------------------------------------------------------------------ #
+    
+    
+    
     def list_universities(self):
         graph = self.uni.get_graph()
         regions = self.uni.get_regions()
@@ -308,7 +308,7 @@ class PlannerSession:
             if _norm(existing) == _norm(name):
                 raise ValueError(f"University '{name}' already exists (as '{existing}').")
 
-        # validate every connection first so a bad one leaves the graph untouched
+        
         links = {}
         for item in connections or []:
             if not isinstance(item, Mapping) or "university" not in item or "weight" not in item:
@@ -339,7 +339,7 @@ class PlannerSession:
         weight = _positive_number(weight, "Weight")
         graph = self.uni.get_graph()
         previous = graph[a][b]["weight"] if graph.has_edge(a, b) else None
-        self.uni.add_connection(a, b, weight)  # also validates a != b
+        self.uni.add_connection(a, b, weight)  
         self._save_graph()
         result = {"connected": [a, b], "weight": _clean(weight)}
         if previous is not None:
@@ -421,7 +421,7 @@ class PlannerSession:
                 graph, plan["full_route"], order,
                 f"TSP route: {' -> '.join(order)} (cost {plan['total_cost']:g})", show=False)
             name = "trip"
-        else:  # shortest_path / path_animation
+        else:  
             if not source or not destination:
                 raise ValueError("source and destination are required for a path plot.")
             found = self.find_shortest_path(source, destination)
@@ -437,7 +437,7 @@ class PlannerSession:
                     raise ValueError("An animation needs two different universities.")
                 suffix = ".gif"
                 ani = visualizer.animate_path(graph, path, title, show=False)
-                fig = plt.gcf()  # the figure animate_path just created
+                fig = plt.gcf()  
                 target = self.output_dir / f"{name}{suffix}"
                 ani.save(str(target), writer="pillow", fps=20)
                 plt.close(fig)
@@ -448,9 +448,9 @@ class PlannerSession:
         plt.close(fig)
         return {"file": str(target), "kind": kind}
 
-    # ------------------------------------------------------------------ #
-    # dispatch
-    # ------------------------------------------------------------------ #
+    
+    
+    
     def call(self, name, arguments=None):
         """Run a tool by name. Always returns a dict; failures use an 'error' key."""
         spec = TOOLS.get(name)
@@ -471,13 +471,13 @@ class PlannerSession:
             return getattr(self, name)(**arguments)
         except ValueError as err:
             return {"error": str(err)}
-        except Exception as err:  # keep the conversation alive whatever happens
+        except Exception as err:  
             return {"error": f"Unexpected {type(err).__name__}: {err}"}
 
 
-# --------------------------------------------------------------------------- #
-# tool schemas (sent to the model)
-# --------------------------------------------------------------------------- #
+
+
+
 def _tool(name, description, properties=None, required=None):
     return {
         "name": name,

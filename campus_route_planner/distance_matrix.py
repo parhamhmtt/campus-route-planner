@@ -25,7 +25,7 @@ def plot_distance_matrix(graph, node_list, show=True, fig=None):
     norm = mcolors.Normalize(vmin=0, vmax=max_val * 1.1)
     image = ax.imshow(display, cmap=plt.cm.Blues, norm=norm)
 
-    # fewer, smaller labels as the table grows
+    
     size = len(node_list)
     cell_font = min(10, max(4.5, 14 - 0.35 * size))
     tick_font = min(10, max(6, 13 - 0.25 * size))
@@ -43,7 +43,7 @@ def plot_distance_matrix(graph, node_list, show=True, fig=None):
         for j in range(len(node_list)):
             value = matrix[i][j]
             label = "∞" if value == INF else f"{value:g}"
-            dark = display[i][j] > 0.6 * max_val * 1.1  # white text on the dark cells
+            dark = display[i][j] > 0.6 * max_val * 1.1  
             ax.text(j, i, label, ha="center", va="center", fontsize=cell_font,
                     color="white" if dark else "black")
 

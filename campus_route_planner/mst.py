@@ -4,7 +4,7 @@ import networkx as nx
 
 
 def compute_mst(graph):
-    # prim with a heap, restarted per component so a disconnected graph gives a forest
+    
     mst = nx.Graph()
     mst.add_nodes_from(graph.nodes)
     visited = set()

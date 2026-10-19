@@ -26,7 +26,7 @@ def test_questions_return_text_and_draw(planner):
         "TSP route: Beheshti -> Kharazmi -> Sharif (cost 13)",
         "Minimum spanning tree (red)",
         "Region-based MST",
-        "",  # the heatmap sets an axes title, not a figure title
+        "",  
     ]
 
 
@@ -151,12 +151,12 @@ def test_seats(planner):
         "Sharif - Tehran: 1 of 1 seat taken.", "  Sara (priority 1)"]
 
 
-# the UK map
 
-from campus_route_planner import planner as planner_module  # noqa: E402
-from campus_route_planner.graph_data import UniversityGraph  # noqa: E402
-from campus_route_planner.uk_data import ROUTES  # noqa: E402
-from campus_route_planner.visualizer import project  # noqa: E402
+
+from campus_route_planner import planner as planner_module  
+from campus_route_planner.graph_data import UniversityGraph  
+from campus_route_planner.uk_data import ROUTES  
+from campus_route_planner.visualizer import project  
 
 
 @pytest.fixture
@@ -201,7 +201,7 @@ def test_an_unlinked_university_moves_next_to_the_neighbour_it_gets(uk):
 
     uk.add_university("Bar", "", [], position=(52.0, -1.0))
     uk.connect_cheapest("Bar", {"Aberdeen": 100})
-    assert uk.uni.get_positions()["Bar"] == (52.0, -1.0)  # we never move what the user placed
+    assert uk.uni.get_positions()["Bar"] == (52.0, -1.0)  
 
 
 def test_guessed_places_never_pile_up(uk):

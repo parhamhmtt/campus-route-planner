@@ -33,7 +33,7 @@ def uk():
     return UniversityGraph()
 
 
-# the data
+
 
 def test_the_default_network_is_the_uk(uk):
     graph = uk.get_graph()
@@ -147,7 +147,7 @@ def test_custom_networks_do_not_get_the_uk_sample():
     assert uni.get_positions() == {"B": (51.0, -1.0)}
 
 
-# the coastline
+
 
 def test_the_outline_file():
     raw = json.loads(Path(visualizer.__file__).with_name("uk_outline.json").read_text())
@@ -156,7 +156,7 @@ def test_the_outline_file():
         for ring in rings:
             assert len(ring) >= 4
             assert all(-12 < lon < 3 and 49 < lat < 61 for lon, lat in ring)
-    assert len(raw["scotland"]) > 5  # the islands are there
+    assert len(raw["scotland"]) > 5  
 
 
 def test_projection():
@@ -166,7 +166,7 @@ def test_projection():
     assert east == pytest.approx(111.32 * math.cos(math.radians(visualizer.LAT0)))
 
 
-# drawing on the map
+
 
 def map_figure(**options):
     uni = UniversityGraph()
@@ -185,12 +185,12 @@ def test_the_map_has_the_coastline_and_every_university():
     assert sum(isinstance(p, Polygon) for p in ax.patches) >= 20
     assert ax.get_aspect() in (1.0, "equal")
     assert set(PLACES) <= set(texts(fig))
-    assert len(ax.collections) >= 2  # routes and dots
+    assert len(ax.collections) >= 2  
 
 
 def test_a_busy_map_labels_only_the_highlighted_routes():
     uni, fig = map_figure()
-    assert not any(t.isdigit() for t in texts(fig))  # 42 routes: no weights at all
+    assert not any(t.isdigit() for t in texts(fig))  
     graph = uni.get_graph()
     path = ["Exeter", "Bristol", "Birmingham"]
     fig = Figure()
@@ -229,7 +229,7 @@ def test_the_view_covers_the_uk_and_grows_for_far_away_places():
     x0, x1, y0, y1 = _view_limits(pos)
     assert x0 < min(p[0] for p in pos.values()) and y1 > max(p[1] for p in pos.values())
     far = dict(pos, Paris=project(48.85, 2.35))
-    assert _view_limits(far)[2] < y0  # Paris is south of the UK view
+    assert _view_limits(far)[2] < y0  
 
 
 def test_regions_get_a_legend_with_every_region():
@@ -239,7 +239,7 @@ def test_regions_get_a_legend_with_every_region():
                  positions=uni.get_positions())
     legend = fig.legends[0]
     assert sorted(t.get_text() for t in legend.get_texts()) == sorted(set(uni.get_regions().values()))
-    # eight regions, eight different colours
+    
     handles = legend.legend_handles
     assert len({h.get_color() for h in handles}) == 8
 
@@ -249,7 +249,7 @@ def test_networks_without_coordinates_still_use_the_spring_layout():
     fig = Figure()
     draw_graph(uni.get_graph(), "t", fig=fig, show=False, positions=uni.get_positions())
     assert not any(isinstance(p, Polygon) for p in fig.axes[0].patches)
-    assert {"A", "B", "C", "1", "2"} <= set(texts(fig))  # plain drawing: names and every weight
+    assert {"A", "B", "C", "1", "2"} <= set(texts(fig))  
 
 
 def test_one_university_missing_its_position_falls_back_for_everyone():

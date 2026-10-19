@@ -107,7 +107,7 @@ def test_add_university_variants(bot):
     bot.reply("add shiraz region south connected to Sharif 7")
     assert bot.planner.uni.get_regions()["Shiraz"] == "south"
     bot.reply("add Mashhad region SOUTH connected to Sharif 7")
-    assert bot.planner.uni.get_regions()["Mashhad"] == "south"  # reuses the existing spelling
+    assert bot.planner.uni.get_regions()["Mashhad"] == "south"  
 
 
 def test_region_number_is_not_a_weight(bot):
@@ -155,7 +155,7 @@ def test_remove_confirmation_is_cancelled_by_another_question(bot):
     bot.reply("remove Kharazmi")
     assert "distance 8" in bot.reply("shortest way from Sharif to Beheshti")
     assert "Kharazmi" in bot.graph
-    assert "didn't get" in bot.reply("yes")  # nothing is pending any more
+    assert "didn't get" in bot.reply("yes")  
 
 
 def test_remove_needs_exactly_one_name(bot):
@@ -173,7 +173,7 @@ def test_reservations(bot):
     assert "full" in bot.reply("reserve a seat for Reza on Sharif-Tehran priority 0").lower()
     answer = bot.reply("who is booked on Sharif-Tehran?")
     assert "2 of 2 seats taken" in answer
-    assert answer.index("Sara Ahmadi") < answer.index("Sara (")  # priority order
+    assert answer.index("Sara Ahmadi") < answer.index("Sara (")  
     assert "2 of 2" in bot.reply("how many seats are left on Sharif and Tehran")
 
 
@@ -301,17 +301,17 @@ def test_unknown_capitalised_names_are_reported(bot):
     assert "I don't know Oxford" in bot.reply("connect Sharif and Oxford with weight 3")
     assert "I don't know Oxford" in bot.reply("remove Oxford")
     assert "Oxford" not in bot.graph
-    # student names and ordinary capitals must not trigger it
+    
     bot.reply("set capacity of Sharif-Tehran to 1")
     assert "Sara now has" in bot.reply("reserve a seat for Sara on Sharif-Tehran priority 1")
     assert "distance 8" in bot.reply("Can I get from Sharif to Beheshti?")
     assert "Total weight" in bot.reply("What is the MST?")
 
 
-# the UK network
 
-from campus_route_planner.graph_data import UniversityGraph  # noqa: E402
-from campus_route_planner.assistant import HELP, KNOWN_WORDS, tokenize  # noqa: E402
+
+from campus_route_planner.graph_data import UniversityGraph  
+from campus_route_planner.assistant import HELP, KNOWN_WORDS, tokenize  
 
 
 @pytest.fixture

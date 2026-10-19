@@ -67,8 +67,8 @@ def test_cancel_a_reservation():
     assert system.cancel("B", "A", "Reza") == (True, "Reza's reservation was cancelled.")
     assert system.view_reservations("A", "B") == [(2, "Sara")]
     assert system.cancel("A", "B", "Reza") == (False, "Reza has no seat on this route.")
-    assert system.cancel("A", "C", "Sara")[0] is False  # no such route
-    # the freed seat can be used again and the queue is still ordered by priority
+    assert system.cancel("A", "C", "Sara")[0] is False  
+    
     assert system.reserve("A", "B", "Ali", 0)[0]
     assert system.reserve("A", "B", "Mina", 5) == (False, "Route is full.")
     assert system.view_reservations("A", "B") == [(0, "Ali"), (2, "Sara")]

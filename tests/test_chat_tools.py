@@ -18,7 +18,7 @@ def ok(result):
     return result
 
 
-# ---- schema / dispatch ---------------------------------------------------- #
+
 def test_every_schema_matches_a_method_signature():
     for spec in TOOL_SCHEMAS:
         method = getattr(PlannerSession, spec["name"])
@@ -30,7 +30,7 @@ def test_every_schema_matches_a_method_signature():
         assert set(schema["properties"]) == set(params), spec["name"]
         required = {n for n, p in params.items() if p.default is inspect.Parameter.empty}
         assert set(schema["required"]) == required, spec["name"]
-    assert len(TOOLS) == len(TOOL_SCHEMAS)  # no duplicate names
+    assert len(TOOLS) == len(TOOL_SCHEMAS)  
 
 
 def test_every_result_is_json_serialisable(session):
@@ -58,7 +58,7 @@ def test_dispatch_never_raises_on_bad_input(session):
     assert "error" in session.call("save_plot", {"kind": "nope"})
 
 
-# ---- name resolution ------------------------------------------------------ #
+
 def test_names_are_matched_loosely_but_typos_only_suggest(session):
     assert session.resolve("sharif") == "Sharif"
     assert session.resolve("  elm o sanat ") == "Elm-o-Sanat"
@@ -72,7 +72,7 @@ def test_names_are_matched_loosely_but_typos_only_suggest(session):
         session.resolve(None)
 
 
-# ---- algorithms through the tools ---------------------------------------- #
+
 def test_shortest_path(session):
     result = ok(session.call("find_shortest_path",
                              {"source": "sharif", "destination": "BEHESHTI"}))
@@ -99,10 +99,10 @@ def test_trip_plan(session):
     result = ok(session.call("plan_multi_stop_trip",
                              {"stops": ["Sharif", "Kharazmi", "Beheshti", "sharif"]}))
     assert result["possible"]
-    assert sorted(result["visit_order"]) == ["Beheshti", "Kharazmi", "Sharif"]  # deduped
+    assert sorted(result["visit_order"]) == ["Beheshti", "Kharazmi", "Sharif"]  
     assert result["full_route"][0] == result["visit_order"][0]
     assert result["full_route"][-1] == result["visit_order"][-1]
-    # the full route must really be a walk in the graph with the claimed cost
+    
     graph = session.uni.get_graph()
     route = result["full_route"]
     cost = sum(graph[a][b]["weight"] for a, b in zip(route, route[1:]))
@@ -121,7 +121,7 @@ def test_mst_and_region_mst(session):
 
     regions = ok(session.call("get_region_mst"))
     assert set(regions["regions"]) == {"Central", "East", "North"}
-    assert len(regions["edges"]) == 5  # connected: one edge fewer than universities
+    assert len(regions["edges"]) == 5  
 
 
 def test_distance_matrix(session):
@@ -131,7 +131,7 @@ def test_distance_matrix(session):
     assert all(matrix["matrix"][i][i] == 0 for i in range(len(names)))
 
 
-# ---- editing the network -------------------------------------------------- #
+
 def test_add_university_validates_then_saves(session, tmp_path):
     ok(session.call("add_university", {
         "name": "Allameh", "region": "central",
@@ -139,7 +139,7 @@ def test_add_university_validates_then_saves(session, tmp_path):
     }))
     graph = session.uni.get_graph()
     assert graph["Allameh"]["Tehran"]["weight"] == 5
-    assert session.uni.get_regions()["Allameh"] == "Central"  # matched existing region
+    assert session.uni.get_regions()["Allameh"] == "Central"  
 
     reloaded = UniversityGraph()
     assert reloaded.load(tmp_path / "graph.json")
@@ -147,9 +147,9 @@ def test_add_university_validates_then_saves(session, tmp_path):
 
 
 @pytest.mark.parametrize("bad", [
-    {"name": "Sharif"},                                   # exists
-    {"name": "SHARIF"},                                   # exists, different case
-    {"name": "elm-o sanat"},                              # same after normalising
+    {"name": "Sharif"},                                   
+    {"name": "SHARIF"},                                   
+    {"name": "elm-o sanat"},                              
     {"name": "  "},
     {"name": "A,B"},
     {"name": "!!!"},
@@ -209,7 +209,7 @@ def test_remove_university(session, tmp_path):
     assert reloaded.reservations.routes == {}
 
 
-# ---- reservations --------------------------------------------------------- #
+
 def test_reservation_flow(session):
     route = {"university_a": "Sharif", "university_b": "Tehran"}
     assert "no capacity" in ok(session.call(
@@ -229,7 +229,7 @@ def test_reservation_flow(session):
 
 
 def test_reservations_need_direct_routes_and_valid_numbers(session):
-    far = {"university_a": "Sharif", "university_b": "Beheshti"}  # connected, but not directly
+    far = {"university_a": "Sharif", "university_b": "Beheshti"}  
     assert "no direct route" in session.call("set_route_capacity", {**far, "capacity": 3})["error"]
     assert "no direct route" in session.call("view_reservations", far)["error"]
     same = {"university_a": "Sharif", "university_b": "Sharif"}
@@ -258,7 +258,7 @@ def test_reservations_survive_a_restart(tmp_path):
     view = ok(second.call("view_reservations", route))
     assert [(r["student"], r["priority"]) for r in view["reservations"]] == [("Sara", 1), ("Ali", 5)]
     assert view["seats_left"] == 1
-    # the restored queue is still a working heap
+    
     assert ok(second.call("reserve_seat", {**route, "student_name": "Reza", "priority": 0}))["success"]
     assert [r["student"] for r in ok(second.call("view_reservations", route))["reservations"]] \
         == ["Reza", "Sara", "Ali"]
@@ -269,7 +269,7 @@ def test_orphaned_reservations_are_dropped_on_load(tmp_path):
     first = PlannerSession(**kwargs)
     ok(first.call("set_route_capacity", {"university_a": "Sharif", "university_b": "Tehran",
                                          "capacity": 3}))
-    first.uni.remove_university("Tehran")  # e.g. deleted from the menu CLI
+    first.uni.remove_university("Tehran")  
     first.uni.save(kwargs["save_path"])
     assert PlannerSession(**kwargs).reservations.routes == {}
 
@@ -282,7 +282,7 @@ def test_persist_false_touches_no_files(tmp_path):
     assert list(tmp_path.iterdir()) == []
 
 
-# ---- plots ---------------------------------------------------------------- #
+
 @pytest.mark.parametrize("args,suffix,magic", [
     ({"kind": "graph"}, ".png", b"\x89PNG"),
     ({"kind": "mst"}, ".png", b"\x89PNG"),
@@ -320,7 +320,7 @@ def test_empty_graph_plot(session):
     assert ok(session.call("get_minimum_spanning_tree"))["edges"] == []
 
 
-# ---- gaps found by mutation testing -------------------------------------- #
+
 def test_deleted_routes_do_not_resurrect_old_reservations(tmp_path):
     kwargs = dict(save_path=tmp_path / "graph.json", output_dir=tmp_path / "out")
     first = PlannerSession(**kwargs)
@@ -331,7 +331,7 @@ def test_deleted_routes_do_not_resurrect_old_reservations(tmp_path):
     ok(first.call("add_university", {"name": "Tehran", "region": "Central",
                                      "connections": [{"university": "Sharif", "weight": 3}]}))
 
-    second = PlannerSession(**kwargs)  # fresh start, reads the files again
+    second = PlannerSession(**kwargs)  
     view = ok(second.call("view_reservations", route))
     assert view["capacity"] is None and view["reservations"] == []
 
